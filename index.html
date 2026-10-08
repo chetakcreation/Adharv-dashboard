@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Adharv Vasu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: #0b0f19; color: #f3f4f6; padding: 30px; }
+        .main-title { font-size: 2.2rem; margin-bottom: 30px; text-align: center; color: #fff; }
+        .main-title span { color: #6366f1; }
+
+        /* Login Overlay */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0b0f19; display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .login-box {
+            background: #111827; padding: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);
+            width: 100%; max-width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center;
+        }
+        .login-box h2 { color: #fff; margin-bottom: 20px; font-size: 1.8rem; }
+        .login-box h2 span { color: #6366f1; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            max-width: 1250px;
+            margin: 0 auto;
+        }
+
+        .menu-grid { display: flex; flex-direction: column; gap: 15px; }
+        .menu-btn {
+            background: #111827; border: 1px solid rgba(255, 255, 255, 0.08); padding: 18px 20px;
+            border-radius: 12px; color: white; font-size: 1rem; font-weight: 600; text-align: left;
+            cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.3s;
+        }
+        .menu-btn i { font-size: 1.2rem; color: #6366f1; }
+        .menu-btn:hover, .menu-btn.active { background: #1f2937; border-color: #6366f1; }
+        .menu-btn.chat-active { background: #f97316; border-color: #f97316; color: white; }
+        .menu-btn.chat-active i { color: white; }
+
+        .admin-section { display: none; background: #111827; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 30px; }
+        .admin-section.active-section { display: block; }
+        .admin-section h3 { font-size: 1.4rem; margin-bottom: 20px; color: #818cf8; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
+
+        .input-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: #9ca3af; font-size: 0.9rem; }
+        input, textarea, select { width: 100%; padding: 10px 14px; background: #1f2937; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; outline: none; font-size: 0.95rem; }
+        textarea { height: 95px; resize: vertical; }
+
+        .post-card-item { background: #1f2937; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; font-size: 0.95rem; }
+        .btn-primary { background: #6366f1; color: white; width: 100%; margin-top: 10px; }
+        .btn-success { background: #10b981; color: white; width: 100%; }
+        .btn-danger { background: #ef4444; color: white; padding: 6px 12px; font-size: 0.85rem; margin-top: 8px; }
+
+        .wa-chat-interface { display: flex; height: 450px; background: #0b0f19; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+        .wa-sidebar { width: 35%; background: #1f2937; border-right: 1px solid rgba(255,255,255,0.08); overflow-y: auto; }
+        .wa-chat-list-item { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .wa-chat-list-item:hover, .wa-chat-list-item.active { background: #374151; }
+        .wa-chat-list-name { font-weight: 700; color: #fff; font-size: 0.95rem; }
+        .wa-chat-list-preview { color: #9ca3af; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .wa-chat-box { width: 65%; display: flex; flex-direction: column; background: #111827; }
+        .wa-chat-header { padding: 14px 18px; background: #1f2937; font-weight: 700; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .wa-chat-messages { flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .wa-msg { max-width: 75%; padding: 9px 13px; border-radius: 9px; font-size: 0.9rem; }
+        .wa-msg.visitor { background: #1f2937; color: #fff; align-self: flex-start; }
+        .wa-msg.admin { background: #6366f1; color: #fff; align-self: flex-end; }
+        .wa-chat-input-area { padding: 12px; background: #1f2937; display: flex; gap: 10px; }
+        .wa-chat-input-area input { flex: 1; padding: 8px 12px; background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2>Admin <span>Login</span></h2>
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="loginUser" placeholder="Enter username">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="Enter password">
+            </div>
+            <button class="btn btn-primary" onclick="handleLogin()">Login</button>
+        </div>
+    </div>
+
+    <h1 class="main-title">Admin <span>Dashboard</span></h1>
+
+    <div class="dashboard-grid" id="dashboardContent" style="display:none;">
+        <div class="menu-grid">
+            <button class="menu-btn active" onclick="switchSection('addNewSection', this)"><i class="fa-solid fa-plus"></i> Add New Work</button>
+            <button class="menu-btn" onclick="switchSection('managePostSection', this)"><i class="fa-solid fa-pen-to-square"></i> Manage Existing Post</button>
+            <button class="menu-btn" onclick="switchSection('siteSettingsSection', this)"><i class="fa-solid fa-gear"></i> Site Settings</button>
+            <button class="menu-btn chat-active" onclick="switchSection('manageChatSection', this)"><i class="fa-solid fa-comments"></i> Manage Chat</button>
+        </div>
+
+        <div class="content-area">
+            <!-- 1. Add New Work -->
+            <div id="addNewSection" class="admin-section active-section">
+                <h3>Add New Work</h3>
+                <div class="input-group">
+                    <label>Select Category</label>
+                    <select id="newCategory">
+                        <option value="Graphic Design">Graphic Design</option>
+                        <option value="Web Developing">Web Developing</option>
+                        <option value="Photography">Photography</option>
+                        <option value="Videography">Videography</option>
+                        <option value="Video Editing">Video Editing</option>
+                        <option value="Content Creator">Content Creator</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Work Title</label>
+                    <input type="text" id="newTitle" placeholder="Enter title">
+                </div>
+                <div class="input-group">
+                    <label>Description</label>
+                    <textarea id="newDesc" placeholder="Enter description"></textarea>
+                </div>
+                <div class="input-group">
+                    <label>Upload File (Image/Video/PDF)</label>
+                    <input type="file" id="newFile" accept="image/*,video/*,.pdf">
+                </div>
+                <button class="btn btn-success" onclick="saveNewWork()">Publish Work</button>
+            </div>
+
+            <!-- 2. Manage Existing Post -->
+            <div id="managePostSection" class="admin-section">
+                <h3>Manage Existing Post</h3>
+                <div class="input-group">
+                    <label>Filter Category</label>
+                    <select id="filterCategory" onchange="renderExistingPosts()">
+                        <option value="All">All</option>
+                        <option value="Graphic Design">Graphic Design</option>
+                        <option value="Web Developing">Web Developing</option>
+                        <option value="Photography">Photography</option>
+                        <option value="Videography">Videography</option>
+                        <option value="Video Editing">Video Editing</option>
+                        <option value="Content Creator">Content Creator</option>
+                    </select>
+                </div>
+                <div id="postsContainer"></div>
+            </div>
+
+            <!-- 3. Site Settings -->
+            <div id="siteSettingsSection" class="admin-section">
+                <h3>Site Settings</h3>
+                <div class="input-group"><label>Logo Text</label><input type="text" id="setLogo" value="ADHARV VASU"></div>
+                <div class="input-group"><label>Hero Title</label><input type="text" id="setTitle" value="Adharv Vasu"></div>
+                <div class="input-group"><label>Hero Tagline</label><input type="text" id="setTagline" value="Mastering Creativity, Code & Visual Storytelling."></div>
+                <div class="input-group"><label>About Quote</label><textarea id="setAboutQuote"></textarea></div>
+                <div class="input-group"><label>About Text</label><textarea id="setAboutText"></textarea></div>
+                <div class="input-group"><label>Contact Email</label><input type="email" id="setEmail"></div>
+                
+                <h4 style="color:#818cf8; margin: 15px 0 10px 0; font-size:1rem;">Social Media Links</h4>
+                <div class="input-group"><label>WhatsApp Link</label><input type="text" id="setWhatsapp"></div>
+                <div class="input-group"><label>Facebook Link</label><input type="text" id="setFb"></div>
+                <div class="input-group"><label>Instagram Link</label><input type="text" id="setInsta"></div>
+                <div class="input-group"><label>X (Twitter) Link</label><input type="text" id="setX"></div>
+                <div class="input-group"><label>LinkedIn Link</label><input type="text" id="setLinkedin"></div>
+                <button class="btn btn-primary" onclick="saveSiteSettings()">Save Settings</button>
+            </div>
+
+            <!-- 4. Manage Chat -->
+            <div id="manageChatSection" class="admin-section">
+                <h3>Manage Chat Inbox</h3>
+                <div class="wa-chat-interface">
+                    <div class="wa-sidebar" id="waChatList"></div>
+                    <div class="wa-chat-box" id="waActiveChatBox">
+                        <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#9ca3af; font-size:0.9rem;">Select a chat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SUPABASE CONFIGURATION ---
+        const SUPABASE_URL = 'https://wqjbdrvdjncmsvwpljhc.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxamJkcnZkam5jbXN2d3BsamhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NTU5MTcsImV4cCI6MjEwNzAzMTkxN30.TQ45yYqh8dlDQb83jwbb7K7xOlZeHF4nOX0OejmAaG0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let portfolioData = {
+            logo: "ADHARV VASU",
+            title: "Adharv Vasu",
+            tagline: "Mastering Creativity, Code & Visual Storytelling.",
+            aboutQuote: "\"I don't just build projects; I engineer experiences that make people pause, feel, and connect.\"",
+            aboutText: "From pixels to code, and lens to screen—turning complex creative visions into seamless digital realities.",
+            email: "adharvvasu@example.com",
+            social: { whatsapp: "#", fb: "#", insta: "#", x: "#", linkedin: "#" },
+            works: [],
+            chats: {}
+        };
+
+        async function fetchSupabaseData() {
+            let { data, error } = await supabaseClient.from('portfolio_data').select('*').eq('id', 1).single();
+            if(data && data.data) {
+                portfolioData = data.data;
+            }
+            loadSettings();
+        }
+
+        async function saveSupabaseData() {
+            let { error } = await supabaseClient.from('portfolio_data').upsert({ id: 1, data: portfolioData });
+            if(error) alert('Error saving to Supabase: ' + error.message);
+            else alert('Saved successfully & synced live!');
+        }
+
+        function handleLogin() {
+            let u = document.getElementById('loginUser').value;
+            let p = document.getElementById('loginPass').value;
+            if(u === 'adharv' && p === 'adharv@55') {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'grid';
+                fetchSupabaseData();
+            } else {
+                alert('Invalid username or password!');
+            }
+        }
+
+        function switchSection(sectionId, btnElement) {
+            document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active-section'));
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active-section');
+            btnElement.classList.add('active');
+
+            if(sectionId === 'managePostSection') renderExistingPosts();
+            if(sectionId === 'manageChatSection') initWhatsAppChats();
+        }
+
+        function loadSettings() {
+            document.getElementById('setLogo').value = portfolioData.logo || '';
+            document.getElementById('setTitle').value = portfolioData.title || '';
+            document.getElementById('setTagline').value = portfolioData.tagline || '';
+            document.getElementById('setAboutQuote').value = portfolioData.aboutQuote || '';
+            document.getElementById('setAboutText').value = portfolioData.aboutText || '';
+            document.getElementById('setEmail').value = portfolioData.email || '';
+            if(portfolioData.social) {
+                document.getElementById('setWhatsapp').value = portfolioData.social.whatsapp || '';
+                document.getElementById('setFb').value = portfolioData.social.fb || '';
+                document.getElementById('setInsta').value = portfolioData.social.insta || '';
+                document.getElementById('setX').value = portfolioData.social.x || '';
+                document.getElementById('setLinkedin').value = portfolioData.social.linkedin || '';
+            }
+        }
+
+        function saveNewWork() {
+            let category = document.getElementById('newCategory').value;
+            let title = document.getElementById('newTitle').value;
+            let desc = document.getElementById('newDesc').value;
+            let fileInput = document.getElementById('newFile');
+
+            if(!title) { alert('Enter title'); return; }
+
+            if(fileInput.files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    let fileBase64 = e.target.result;
+                    storeWorkData(category, title, desc, fileBase64);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                storeWorkData(category, title, desc, '');
+            }
+        }
+
+        function storeWorkData(category, title, desc, fileData) {
+            portfolioData.works.push({ id: Date.now(), category, title, desc, file: fileData });
+            saveSupabaseData();
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('newFile').value = '';
+        }
+
+        function renderExistingPosts() {
+            let filter = document.getElementById('filterCategory').value;
+            let container = document.getElementById('postsContainer');
+            container.innerHTML = '';
+            let list = filter === 'All' ? portfolioData.works : portfolioData.works.filter(w => w.category === filter);
+            if(list.length === 0) { container.innerHTML = '<p style="color:#9ca3af;">No posts found.</p>'; return; }
+            list.forEach(w => {
+                container.innerHTML += `
+                    <div class="post-card-item">
+                        <span style="color:#818cf8; font-size:0.85rem;">[${w.category}]</span>
+                        <input type="text" id="t-${w.id}" value="${w.title}" style="margin:10px 0;">
+                        <textarea id="d-${w.id}">${w.desc}</textarea>
+                        <button class="btn btn-primary" onclick="updatePost(${w.id})">Update</button>
+                        <button class="btn btn-danger" onclick="deletePost(${w.id})">Delete</button>
+                    </div>`;
+            });
+        }
+
+        function updatePost(id) {
+            let item = portfolioData.works.find(w => w.id === id);
+            if(item) {
+                item.title = document.getElementById(`t-${id}`).value;
+                item.desc = document.getElementById(`d-${id}`).value;
+                saveSupabaseData();
+            }
+        }
+
+        function deletePost(id) {
+            portfolioData.works = portfolioData.works.filter(w => w.id !== id);
+            saveSupabaseData();
+            renderExistingPosts();
+        }
+
+        function saveSiteSettings() {
+            portfolioData.logo = document.getElementById('setLogo').value;
+            portfolioData.title = document.getElementById('setTitle').value;
+            portfolioData.tagline = document.getElementById('setTagline').value;
+            portfolioData.aboutQuote = document.getElementById('setAboutQuote').value;
+            portfolioData.aboutText = document.getElementById('setAboutText').value;
+            portfolioData.email = document.getElementById('setEmail').value;
+            portfolioData.social = {
+                whatsapp: document.getElementById('setWhatsapp').value,
+                fb: document.getElementById('setFb').value,
+                insta: document.getElementById('setInsta').value,
+                x: document.getElementById('setX').value,
+                linkedin: document.getElementById('setLinkedin').value
+            };
+            saveSupabaseData();
+        }
+
+        function initWhatsAppChats() {
+            let sidebar = document.getElementById('waChatList');
+            sidebar.innerHTML = '';
+            let chatNames = Object.keys(portfolioData.chats || {});
+            if(chatNames.length === 0) {
+                sidebar.innerHTML = '<p style="padding:15px; color:#9ca3af; font-size:0.85rem;">No chats available.</p>';
+                return;
+            }
+            chatNames.forEach((name, idx) => {
+                let lastMsg = portfolioData.chats[name][portfolioData.chats[name].length - 1];
+                sidebar.innerHTML += `
+                    <div class="wa-chat-list-item ${idx === 0 ? 'active' : ''}" onclick="openChat('${name}', this)">
+                        <div class="wa-chat-list-name"><i class="fa-solid fa-user-circle"></i> ${name}</div>
+                        <div class="wa-chat-list-preview">${lastMsg.text}</div>
+                    </div>`;
+            });
+            if(chatNames.length > 0) openChat(chatNames[0]);
+        }
+
+        function openChat(name, element) {
+            if(element) {
+                document.querySelectorAll('.wa-chat-list-item').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+            }
+            let messages = portfolioData.chats[name] || [];
+            let box = document.getElementById('waActiveChatBox');
+            let msgHTML = '';
+            messages.forEach(m => {
+                msgHTML += `<div class="wa-msg ${m.sender}">${m.text}</div>`;
+            });
+            box.innerHTML = `
+                <div class="wa-chat-header"><i class="fa-solid fa-user"></i> ${name}</div>
+                <div class="wa-chat-messages" id="waMsgScroll">${msgHTML}</div>
+                <div class="wa-chat-input-area">
+                    <input type="text" id="adminReplyText" placeholder="Type a message..." onkeypress="handleAdminEnter(event, '${name}')">
+                    <button class="btn btn-primary" style="width:auto; margin-top:0; padding:6px 12px;" onclick="sendAdminMsg('${name}')">Send</button>
+                </div>`;
+            let scroll = document.getElementById('waMsgScroll');
+            scroll.scrollTop = scroll.scrollHeight;
+        }
+
+        function sendAdminMsg(name) {
+            let input = document.getElementById('adminReplyText');
+            if(!input.value.trim()) return;
+            if(!portfolioData.chats[name]) portfolioData.chats[name] = [];
+            portfolioData.chats[name].push({ sender: 'admin', text: input.value });
+            saveSupabaseData();
+            openChat(name);
+        }
+
+        function handleAdminEnter(e, name) {
+            if(e.key === 'Enter') sendAdminMsg(name);
+        }
+    </script>
+</body>
+</html>
