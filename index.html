@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | Adharv Vasu</title>
+    <title>Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -15,7 +14,6 @@
         .main-title { font-size: 2.2rem; margin-bottom: 30px; text-align: center; color: #fff; }
         .main-title span { color: #6366f1; }
 
-        /* Login Overlay */
         #loginOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0b0f19; display: flex; justify-content: center; align-items: center; z-index: 9999;
@@ -80,7 +78,6 @@
 </head>
 <body>
 
-    <!-- Login Overlay -->
     <div id="loginOverlay">
         <div class="login-box">
             <h2>Admin <span>Login</span></h2>
@@ -107,7 +104,6 @@
         </div>
 
         <div class="content-area">
-            <!-- 1. Add New Work -->
             <div id="addNewSection" class="admin-section active-section">
                 <h3>Add New Work</h3>
                 <div class="input-group">
@@ -136,7 +132,6 @@
                 <button class="btn btn-success" onclick="saveNewWork()">Publish Work</button>
             </div>
 
-            <!-- 2. Manage Existing Post -->
             <div id="managePostSection" class="admin-section">
                 <h3>Manage Existing Post</h3>
                 <div class="input-group">
@@ -154,7 +149,6 @@
                 <div id="postsContainer"></div>
             </div>
 
-            <!-- 3. Site Settings -->
             <div id="siteSettingsSection" class="admin-section">
                 <h3>Site Settings</h3>
                 <div class="input-group"><label>Logo Text</label><input type="text" id="setLogo" value="ADHARV VASU"></div>
@@ -173,7 +167,6 @@
                 <button class="btn btn-primary" onclick="saveSiteSettings()">Save Settings</button>
             </div>
 
-            <!-- 4. Manage Chat -->
             <div id="manageChatSection" class="admin-section">
                 <h3>Manage Chat Inbox</h3>
                 <div class="wa-chat-interface">
@@ -187,7 +180,6 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION ---
         const SUPABASE_URL = 'https://wqjbdrvdjncmsvwpljhc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxamJkcnZkam5jbXN2d3BsamhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NTU5MTcsImV4cCI6MjEwNzAzMTkxN30.TQ45yYqh8dlDQb83jwbb7K7xOlZeHF4nOX0OejmAaG0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
